@@ -1,0 +1,1 @@
+curl -H "Authorization: Bearer your_api_token" -H "Content-Type: application/json" https://api.example.com/data
