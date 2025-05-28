@@ -1,0 +1,63 @@
+from playwright.sync_api import sync_playwright
+import json
+
+# ======= CONFIGURATION =======
+CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"  # Change if needed
+
+LOGIN_URL = "https://dns.adfsdf.com/saml2/idp/sso?..."  # ← Replace with actual login URL
+TARGET_JSON_URL = "https://your-secure-app.com/data.json"  # ← Replace with actual JSON data URL
+
+USERNAME = "your_username"
+PASSWORD = "your\\password"  # Double backslash if there's \ in password
+
+# ======= MAIN FUNCTION =======
+def login_and_fetch_json():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=False,
+            executable_path=CHROME_PATH
+        )
+        context = browser.new_context()
+        page = context.new_page()
+
+        print("🔐 Navigating to login page...")
+        page.goto(LOGIN_URL)
+
+        # Login — update selectors if needed
+        page.fill('input[name="username"]', USERNAME)
+        page.fill('input[name="password"]', PASSWORD)
+        page.press('input[name="password"]', 'Enter')
+
+        # Wait for login to complete
+        page.wait_for_load_state('networkidle')
+
+        print("🌐 Navigating to JSON data URL...")
+        response = page.goto(TARGET_JSON_URL)
+
+        if response and response.status == 200:
+            try:
+                json_data = response.json()
+                print("✅ Successfully fetched JSON:\n")
+
+                # ======= EXTRACT SPECIFIC DATA =======
+                # Example: customize this based on your actual JSON structure
+                print("User:", json_data.get("user", {}).get("name"))
+                print("Email:", json_data.get("user", {}).get("email"))
+                print("Access Level:", json_data.get("access_level"))
+                print("Records found:", len(json_data.get("records", [])))
+
+                for rec in json_data.get("records", []):
+                    print(f"• Record ID: {rec.get('id')}, Status: {rec.get('status')}")
+
+            except Exception as e:
+                print("❌ Could not parse JSON:", str(e))
+                print("Raw content:")
+                print(response.text())
+        else:
+            print(f"❌ Failed to load data page. Status code: {response.status if response else 'No response'}")
+
+        browser.close()
+
+# ======= RUN SCRIPT =======
+if __name__ == "__main__":
+    login_and_fetch_json()
