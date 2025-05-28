@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Internal API URL
+API_URL="https://your.internal.api/endpoint"
+
+# Set your cookie values here (update regularly)
+VCAP_ID="your_vcap_id_value_here"
+JSESSIONID="your_jsessionid_value_here"
+
+# Make the API call with cookies
+response=$(curl -s -w "%{http_code}" -b "vcap_id=$VCAP_ID; JSESSIONID=$JSESSIONID" "$API_URL")
+
+# Separate body and status code
+http_body="${response::-3}"
+http_code="${response: -3}"
+
+echo "HTTP Status Code: $http_code"
+echo "Response Body:"
+echo "$http_body"
+
+# Optional: Check if unauthorized
+if [[ "$http_code" == "401" ]] || [[ "$http_code" == "403" ]]; then
+  echo "Error: Unauthorized. Your cookies may be expired or invalid."
+fi
