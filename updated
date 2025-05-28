@@ -1,43 +1,38 @@
 import requests
+from bs4 import BeautifulSoup
 
-# URLS
-LOGIN_URL = "https://example.com/login"   # replace with actual login URL
-DATA_URL = "https://example.com/data"     # replace with actual protected URL
-
-# Credentials
+LOGIN_URL = "https://example.com/login"
+DATA_URL = "https://example.com/data"
 USERNAME = "your_username"
 PASSWORD = "your_password"
 
-# Start a session
 session = requests.Session()
 
-# Create payload for login
+# Step 1: GET login page to fetch CSRF token
+login_page = session.get(LOGIN_URL)
+soup = BeautifulSoup(login_page.text, 'html.parser')
+
+# Assume token is in an input field named 'csrf_token'
+csrf_token = soup.find('input', {'name': 'csrf_token'})['value']
+
 payload = {
     "username": USERNAME,
-    "password": PASSWORD
+    "password": PASSWORD,
+    "csrf_token": csrf_token
 }
 
-# Optional headers (some sites require User-Agent)
 headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    "User-Agent": "Mozilla/5.0",
+    "Referer": LOGIN_URL
 }
 
-# Step 1: Login
-print("[*] Attempting to log in...")
-
+# Step 2: POST login form
 login_response = session.post(LOGIN_URL, data=payload, headers=headers)
 
-# Check if login worked
-if login_response.status_code == 200 and "Welcome" in login_response.text:
-    print("[+] Logged in successfully.")
-    
-    # Step 2: Access the protected page
-    data_response = session.get(DATA_URL)
-
-    if data_response.status_code == 200:
-        print("[+] Data fetched successfully!")
-        print(data_response.text[:1000])  # Print first 1000 characters
-    else:
-        print("[-] Failed to fetch data. Status:", data_response.status_code)
+if "check login or password" in login_response.text.lower():
+    print("[-] Login failed: Incorrect username/password or missing CSRF token.")
 else:
-    print("[-] Login failed. Check your credentials or login URL.")
+    print("[+] Login successful!")
+    # Fetch protected data
+    data_response = session.get(DATA_URL)
+    print(data_response.text[:500])
