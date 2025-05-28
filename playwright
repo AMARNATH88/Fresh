@@ -1,0 +1,61 @@
+from playwright.sync_api import sync_playwright
+import requests
+import pickle
+import os
+
+# Save cookies from Playwright
+def save_cookies(cookies, path):
+    with open(path, 'wb') as f:
+        pickle.dump(cookies, f)
+
+# Load cookies for requests
+def load_cookies(path):
+    with open(path, 'rb') as f:
+        return pickle.load(f)
+
+COOKIE_FILE = "cookies.pkl"
+
+# Step 1: Login with Playwright and save cookies
+def login_with_playwright():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context()
+        page = context.new_page()
+
+        page.goto("https://dns.adfsdf.com/saml2/idp/sso?...")
+
+        # Fill in credentials — adjust these selectors if needed
+        page.fill('input[name="username"]', 'your_username')
+        page.fill('input[name="password"]', 'your\\password')
+        page.press('input[name="password"]', 'Enter')
+
+        page.wait_for_load_state('networkidle')  # Wait for redirect
+
+        # Optional: Go to a page that proves you're logged in
+        page.goto("https://your-secure-app.com/data")
+
+        # Save cookies
+        cookies = context.cookies()
+        save_cookies(cookies, COOKIE_FILE)
+
+        print("✅ Logged in and cookies saved.")
+        browser.close()
+
+# Step 2: Use requests with those cookies
+def use_requests_with_cookies():
+    session = requests.Session()
+    cookies = load_cookies(COOKIE_FILE)
+
+    for cookie in cookies:
+        session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
+
+    # Use session to access secure page
+    response = session.get("https://your-secure-app.com/data")
+    print("✅ Response status:", response.status_code)
+    print(response.text[:1000])
+
+# === Run ===
+if not os.path.exists(COOKIE_FILE):
+    login_with_playwright()
+
+use_requests_with_cookies()
