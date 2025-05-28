@@ -1,0 +1,56 @@
+from playwright.sync_api import sync_playwright
+
+# ======= CONFIGURATION =======
+CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"  # Adjust if Chrome is elsewhere
+LOGIN_URL = "https://dns.adfsdf.com/saml2/idp/sso?..."  # Replace with actual login URL
+TARGET_JSON_URL = "https://your-secure-app.com/data.json"  # Replace with actual data URL
+
+USERNAME = "your_username"
+PASSWORD = "your\\password"  # Use double backslashes if your password includes "\"
+
+# ======= MAIN FUNCTION =======
+def login_and_fetch_json():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=False,
+            executable_path=CHROME_PATH
+        )
+        context = browser.new_context()
+        page = context.new_page()
+
+        print("🔐 Navigating to login page...")
+        page.goto(LOGIN_URL)
+
+        # ==== LOGIN FIELDS (update selectors if needed) ====
+        page.fill('input[name="username"]', USERNAME)
+        page.fill('input[name="password"]', PASSWORD)
+        page.press('input[name="password"]', 'Enter')
+
+        page.wait_for_load_state('networkidle')
+
+        print("🌐 Navigating to JSON data URL...")
+        response = page.goto(TARGET_JSON_URL)
+
+        if response and response.status == 200:
+            try:
+                json_data = response.json()
+
+                if isinstance(json_data, list):
+                    print("\n📌 Extracting ID and Visible Count from all records:\n")
+                    for record in json_data:
+                        id_val = record.get("id")
+                        visible_val = record.get("rowCount", {}).get("public", {}).get("visible")
+                        print(f"ID: {id_val}, Visible Count: {visible_val}")
+                else:
+                    print("❌ Expected a list of records in JSON, but got a different structure.")
+            except Exception as e:
+                print("❌ Failed to parse JSON:", str(e))
+                print("Raw response:\n", response.text())
+        else:
+            print(f"❌ Failed to fetch data. Status code: {response.status if response else 'No response'}")
+
+        browser.close()
+
+# ======= RUN SCRIPT =======
+if __name__ == "__main__":
+    login_and_fetch_json()
