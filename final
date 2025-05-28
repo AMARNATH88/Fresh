@@ -1,0 +1,128 @@
+from playwright.sync_api import sync_playwright
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+# ======= CONFIGURATION =======
+CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+LOGIN_URL = "https://dns.adfsdf.com/saml2/idp/sso?..."  # Replace with actual login URL
+TARGET_JSON_URL = "https://your-secure-app.com/data.json"  # Replace with your JSON data URL
+
+USERNAME = "your_username"
+PASSWORD = "your\\password"  # Double backslashes if using "\"
+
+# ======= EMAIL SETTINGS FOR OUTLOOK =======
+SMTP_SERVER = "smtp.office365.com"
+SMTP_PORT = 587
+EMAIL_FROM = "your_email@company.com"
+EMAIL_TO = "recipient@company.com"
+EMAIL_SUBJECT = "Automated Data Report"
+EMAIL_USER = "your_email@company.com"
+EMAIL_PASS = "your_email_password"  # Use app password if MFA is enabled
+
+# ======= MAIN FUNCTION =======
+def login_and_fetch_html_table():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=True,
+            executable_path=CHROME_PATH
+        )
+        context = browser.new_context()
+        page = context.new_page()
+
+        print("🔐 Navigating to login page...")
+        page.goto(LOGIN_URL)
+
+        # Modify selectors if needed
+        page.fill('input[name="username"]', USERNAME)
+        page.fill('input[name="password"]', PASSWORD)
+        page.press('input[name="password"]', 'Enter')
+        page.wait_for_load_state('networkidle')
+
+        print("🌐 Navigating to JSON data URL...")
+        response = page.goto(TARGET_JSON_URL)
+
+        if response and response.status == 200:
+            try:
+                json_data = response.json()
+
+                if isinstance(json_data, list):
+                    html_rows = ""
+                    for record in json_data:
+                        id_val = record.get("id", "")
+                        visible_val = record.get("rowCount", {}).get("public", {}).get("visible", "")
+                        html_rows += f"<tr><td>{id_val}</td><td>{visible_val}</td></tr>"
+
+                    html_table = f"""
+                    <html>
+                    <head>
+                        <style>
+                            table {{
+                                width: 60%;
+                                border-collapse: collapse;
+                                margin: 20px 0;
+                                font-size: 16px;
+                            }}
+                            th, td {{
+                                border: 1px solid #dddddd;
+                                text-align: left;
+                                padding: 8px;
+                            }}
+                            th {{
+                                background-color: #f2f2f2;
+                            }}
+                        </style>
+                    </head>
+                    <body>
+                        <h2>Extracted Data Report</h2>
+                        <table>
+                            <tr>
+                                <th>ID</th>
+                                <th>Visible Count</th>
+                            </tr>
+                            {html_rows}
+                        </table>
+                    </body>
+                    </html>
+                    """
+                    browser.close()
+                    return html_table
+
+                else:
+                    print("❌ JSON was not a list.")
+                    return None
+
+            except Exception as e:
+                print("❌ Failed to parse JSON:", str(e))
+                return None
+
+        else:
+            print(f"❌ Failed to fetch JSON data. Status: {response.status if response else 'No response'}")
+            browser.close()
+            return None
+
+# ======= SEND EMAIL FUNCTION =======
+def send_email(html_content):
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = EMAIL_SUBJECT
+    msg["From"] = EMAIL_FROM
+    msg["To"] = EMAIL_TO
+
+    part = MIMEText(html_content, "html")
+    msg.attach(part)
+
+    try:
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(EMAIL_USER, EMAIL_PASS)
+        server.sendmail(EMAIL_FROM, EMAIL_TO, msg.as_string())
+        server.quit()
+        print("📧 Email sent successfully.")
+    except Exception as e:
+        print(f"❌ Failed to send email: {str(e)}")
+
+# ======= RUN SCRIPT =======
+if __name__ == "__main__":
+    html_table = login_and_fetch_html_table()
+    if html_table:
+        send_email(html_table)
