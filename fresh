@@ -1,0 +1,41 @@
+import requests
+
+# URLs
+LOGIN_URL = "https://example.com/login"
+DATA_URL = "https://example.com/data"
+
+# Credentials
+USERNAME = "your_username"
+PASSWORD = "your_password"
+
+# Create a session object to persist cookies
+session = requests.Session()
+
+# Create the login payload - field names should match the login form
+login_payload = {
+    "username": USERNAME,
+    "password": PASSWORD
+}
+
+# Optional: Add headers if needed
+headers = {
+    "User-Agent": "Mozilla/5.0"
+}
+
+# Step 1: Log in
+login_response = session.post(LOGIN_URL, data=login_payload, headers=headers)
+
+# Check if login was successful
+if login_response.status_code == 200 and "Welcome" in login_response.text:
+    print("[+] Login successful!")
+
+    # Step 2: Access the protected page
+    data_response = session.get(DATA_URL)
+
+    if data_response.status_code == 200:
+        print("[+] Data fetched successfully!")
+        print(data_response.text)  # or handle JSON, CSV, etc.
+    else:
+        print("[-] Failed to fetch protected data.")
+else:
+    print("[-] Login failed. Check credentials or form parameters.")
