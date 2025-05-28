@@ -1,0 +1,74 @@
+from playwright.sync_api import sync_playwright
+import requests
+import pickle
+import os
+import shutil
+
+COOKIE_FILE = "cookies.pkl"
+
+# Save cookies to file
+def save_cookies(cookies, path):
+    with open(path, 'wb') as f:
+        pickle.dump(cookies, f)
+
+# Load cookies from file
+def load_cookies(path):
+    with open(path, 'rb') as f:
+        return pickle.load(f)
+
+# Get system Chrome path
+def get_chrome_path():
+    chrome_path = shutil.which("google-chrome") or shutil.which("chrome")
+    if chrome_path:
+        return chrome_path
+    else:
+        raise FileNotFoundError("❌ Google Chrome not found on system PATH.")
+
+# Step 1: Login with Playwright (using system Chrome)
+def login_with_playwright():
+    chrome_path = get_chrome_path()
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=False,
+            executable_path=chrome_path
+        )
+        context = browser.new_context()
+        page = context.new_page()
+
+        # Go to SAML login page
+        page.goto("https://dns.adfsdf.com/saml2/idp/sso?...")
+
+        # Fill credentials (adjust these selectors if needed)
+        page.fill('input[name="username"]', 'your_username')
+        page.fill('input[name="password"]', 'your\\password')
+        page.press('input[name="password"]', 'Enter')
+
+        page.wait_for_load_state('networkidle')
+
+        # Optional: Navigate to a page that proves you're logged in
+        page.goto("https://your-secure-app.com/data")
+
+        # Save cookies
+        cookies = context.cookies()
+        save_cookies(cookies, COOKIE_FILE)
+
+        print("✅ Logged in and cookies saved.")
+        browser.close()
+
+# Step 2: Use requests with those cookies
+def use_requests_with_cookies():
+    session = requests.Session()
+    cookies = load_cookies(COOKIE_FILE)
+
+    for cookie in cookies:
+        session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
+
+    response = session.get("https://your-secure-app.com/data")
+    print("✅ Response status:", response.status_code)
+    print(response.text[:1000])  # Print first 1000 characters
+
+# === Run ===
+if not os.path.exists(COOKIE_FILE):
+    login_with_playwright()
+
+use_requests_with_cookies()
