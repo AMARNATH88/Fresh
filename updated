@@ -1,0 +1,43 @@
+import requests
+
+# URLS
+LOGIN_URL = "https://example.com/login"   # replace with actual login URL
+DATA_URL = "https://example.com/data"     # replace with actual protected URL
+
+# Credentials
+USERNAME = "your_username"
+PASSWORD = "your_password"
+
+# Start a session
+session = requests.Session()
+
+# Create payload for login
+payload = {
+    "username": USERNAME,
+    "password": PASSWORD
+}
+
+# Optional headers (some sites require User-Agent)
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+}
+
+# Step 1: Login
+print("[*] Attempting to log in...")
+
+login_response = session.post(LOGIN_URL, data=payload, headers=headers)
+
+# Check if login worked
+if login_response.status_code == 200 and "Welcome" in login_response.text:
+    print("[+] Logged in successfully.")
+    
+    # Step 2: Access the protected page
+    data_response = session.get(DATA_URL)
+
+    if data_response.status_code == 200:
+        print("[+] Data fetched successfully!")
+        print(data_response.text[:1000])  # Print first 1000 characters
+    else:
+        print("[-] Failed to fetch data. Status:", data_response.status_code)
+else:
+    print("[-] Login failed. Check your credentials or login URL.")
