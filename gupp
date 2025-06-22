@@ -1,0 +1,48 @@
+from tabulate import tabulate
+
+# Your rows (replace with your actual logic)
+rows = [
+    {"version": "public.Actual", "record count": 7012916},
+    {"version": "public.CP24", "record count": 0},
+    {"version": "public.PreGPR_CPYY", "record count": 0},
+    {"version": "public.W_BRYY", "record count": 65198943},
+    {"version": "public.W_CFX", "record count": 0},
+]
+
+label = "CP"
+
+# Generate HTML table using tabulate
+html_table = tabulate(rows, headers="keys", tablefmt="html")
+
+# Inject border and padding inline (this fixes the issue)
+html_table = html_table.replace(
+    "<table>",
+    "<table style='border-collapse: collapse; border: 1px solid black;'>"
+)
+html_table = html_table.replace(
+    "<th",
+    "<th style='border: 1px solid black; padding: 4px;'"
+)
+html_table = html_table.replace(
+    "<td",
+    "<td style='border: 1px solid black; padding: 4px;'"
+)
+
+# Final HTML
+final_html = f"<h2>{label}</h2>\n{html_table}\n"
+
+html_body = f"""
+<html>
+<head></head>
+<body>
+    <h2>Data Records</h2>
+    {final_html}
+</body>
+</html>
+"""
+
+# Save to file
+with open("output_fixed.html", "w", encoding="utf-8") as f:
+    f.write(html_body)
+
+print("✅ Table fixed with borders — saved as output_fixed.html")
