@@ -1,0 +1,50 @@
+import json
+from tabulate import tabulate
+
+# Load JSON file
+label = "your_label_name"  # replace this with the actual label
+with open(f"{label}_model.txt", 'r') as file:
+    data = json.load(file)
+    print(data)
+
+# Extract only 'id' and 'rowCount.public.visible' from 'versions'
+rows = []
+for item in data.get("versions", []):
+    version = item.get("id", "")
+    record_count = item.get("rowCount", {}).get("public", {}).get("visible", "")
+    rows.append({
+        "version": version,
+        "record count": record_count
+    })
+
+# Convert to HTML table
+html_table = tabulate(rows, headers="keys", tablefmt="html")
+
+# Final HTML
+final_html = f"<h2>{label}</h2>\n{html_table}"
+print(final_html)
+
+# If you're embedding this into an email body
+html_body = f"""
+<html>
+<head>
+<style>
+    table {{
+        width: 100%;
+        border-collapse: collapse;
+    }}
+    th, td {{
+        border: 1px solid black;
+        padding: 8px;
+        text-align: left;
+    }}
+    th {{
+        background-color: #f2f2f2;
+    }}
+</style>
+</head>
+<body>
+{final_html}
+</body>
+</html>
+"""
