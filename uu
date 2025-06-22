@@ -1,0 +1,9 @@
+final_html = f"<h2>{label}</h2>\n{html_table}\n"
+
+html_body = f"""
+<html>
+<body>
+    {final_html}
+</body>
+</html>
+"""
