@@ -1,0 +1,55 @@
+import json
+import re
+from tabulate import tabulate
+
+label = "your_label"  # Replace with your actual label or dynamic variable
+
+# Load JSON data from file
+with open(f"{label}_model.txt", 'r') as file:
+    data = json.load(file)
+
+# Extract rows with version and record count
+rows = []
+for item in data.get("versions", []):
+    version = item.get("id", "")
+    record_count = item.get("rowCount", {}).get("public", {}).get("visible", "")
+    rows.append({"version": version, "record count": record_count})
+
+# Generate raw HTML table using tabulate
+html_table = tabulate(rows, headers="keys", tablefmt="html")
+
+# Inject inline styles with compact spacing
+html_table = re.sub(
+    r'<th([^>]*)>',
+    r'<th\1 style="border: 1px solid black; padding: 2px; background-color: #f2f2f2;">',
+    html_table
+)
+html_table = re.sub(
+    r'<td([^>]*)>',
+    r'<td\1 style="border: 1px solid black; padding: 2px;">',
+    html_table
+)
+html_table = html_table.replace(
+    "<table>",
+    "<table style='width: 100%; border: 1px solid black; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px;'>"
+)
+
+# Compose final HTML
+final_html = f"""
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>{label} Data</title>
+  </head>
+  <body>
+    <h2>{label} Data Records</h2>
+    {html_table}
+  </body>
+</html>
+"""
+
+# Save to file
+with open("output_table.html", "w", encoding="utf-8") as f:
+    f.write(final_html)
+
+print("✅ Compact, bordered HTML table saved as: output_table.html")
